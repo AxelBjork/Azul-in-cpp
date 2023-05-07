@@ -208,7 +208,7 @@ public:
     return takenTiles;
   }
 
-  auto getContents(int displayId = -1) const {
+  map<string, int> getContents(int displayId = -1) const {
     if (displayId == -1) {
       return centralMarket.getContents();
     } else {
@@ -235,25 +235,34 @@ private:
 int main() {
   int numFactoryDisplays = 5;
   Factory factory(numFactoryDisplays);
-
-  // Refill factory displays
-  factory.refillDisplays();
-
-  // Print contents of factory
   factory.printContents();
+  // Refill and empty
+  for (int round = 0; round < 5; ++round) {
+    // Take all the tiles
+    for (int id = 0; id < numFactoryDisplays; ++id) {
+      map<string, int> displayContents = factory.getContents(id);
+      if (!displayContents.empty()) {
+        string topColor;
+        int maxTiles = 0;
+        for (const auto &colorCount : displayContents) {
+          if (colorCount.second > maxTiles) {
+            maxTiles = colorCount.second;
+            topColor = colorCount.first;
+          }
+        }
+        vector<Tile> myTiles = factory.takeDisplayTiles(id, topColor);
+      }
+    }
+    factory.printContents();
+    const vector<string> colors = {"Black", "Red", "Blue", "Yellow", "Green"};
+    for (const string &color : colors) {
+      vector<Tile> myTiles = factory.takeCenterTiles(color);
+    }
 
-  auto content = factory.getContents(-1);
-  // print colors
-
-  cout << content["Black"] << content["Red"] << content["Blue"]
-       << content["Yellow"] << content["Green"] << endl;
-
-  auto content2 = factory.getContents(0);
-  cout << content2["Black"] << content2["Red"] << content2["Blue"]
-       << content2["Yellow"] << content2["Green"] << endl;
-
-  // Perform other game logic, such as taking tiles from displays or central
-  // market
+    factory.printContents();
+    factory.refillDisplays();
+    factory.printContents();
+  }
 
   return 0;
 }
