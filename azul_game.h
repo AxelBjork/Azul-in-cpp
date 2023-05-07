@@ -14,6 +14,7 @@ using namespace std;
 // Tile class
 class Tile {
 public:
+  Tile(); // Add a default constructor declaration
   Tile(const string &color);
 
   string getColor() const;

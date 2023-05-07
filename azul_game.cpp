@@ -1,6 +1,8 @@
 #include "azul_game.h"
 
 // Tile class
+Tile::Tile() : color("") {} // Add a default constructor
+
 Tile::Tile(const string &color) : color(color) {}
 
 string Tile::getColor() const { return color; }
