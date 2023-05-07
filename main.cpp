@@ -1,5 +1,6 @@
 // Azul game
 
+#include <algorithm>
 #include <ctime>
 #include <iostream>
 #include <map>
@@ -20,9 +21,11 @@ private:
   string color;
 };
 
+// Helper functions
 map<string, int> getTileCounts(const vector<Tile> &tiles) {
   map<string, int> colorCounts;
-  const vector<string> colors = {"Black", "Red", "Blue", "Yellow", "Green"};
+  const vector<string> colors = {"Black",  "Red",   "Blue",
+                                 "Yellow", "Green", "First Player"};
 
   for (const string &color : colors) {
     colorCounts[color] = 0;
@@ -38,10 +41,15 @@ map<string, int> getTileCounts(const vector<Tile> &tiles) {
 void printTileCounts(const vector<Tile> &tiles, const string &containerName) {
   map<string, int> colorCounts = getTileCounts(tiles);
 
-  cout << containerName << " contents:" << endl;
+  cout << containerName << " contents: [ ";
+  // All colors should be printed in one line
   for (const auto &colorCount : colorCounts) {
-    cout << colorCount.first << ": " << colorCount.second << endl;
+    if (colorCount.second == 0) {
+      continue;
+    }
+    cout << colorCount.first << ": " << colorCount.second << " ";
   }
+  cout << "]" << endl;
 }
 
 // TileBag class
@@ -83,6 +91,8 @@ private:
 // CentralMarket class
 class CentralMarket {
 public:
+  // center_taken 1 penalty point for first player
+  bool center_taken = false;
   void addTile(const Tile &tile) { tiles.push_back(tile); }
 
   vector<Tile> takeTilesOfColor(const string &color) {
@@ -96,23 +106,28 @@ public:
         ++it;
       }
     }
+    if (center_taken == false) {
+      Tile penalty_tile = tiles[5];
+      center_taken = true;
+      takenTiles.push_back(penalty_tile);
+    }
 
     return takenTiles;
   }
 
   bool isEmpty() const { return tiles.empty(); }
-
+  map<string, int> getContents() const { return getTileCounts(tiles); }
   void printContents() const { printTileCounts(tiles, "Central Market"); }
 
-private:
   vector<Tile> tiles;
 };
 
 // FactoryDisplay class
 class FactoryDisplay {
 public:
-  FactoryDisplay(TileBag &tileBag) { refill(tileBag); }
-
+  FactoryDisplay(TileBag &tileBag, int display_id) : display_id(display_id) {
+    refill(tileBag);
+  }
   void refill(TileBag &tileBag) {
     tiles.clear();
     for (int i = 0; i < 4; ++i) {
@@ -120,27 +135,38 @@ public:
     }
   }
 
-  vector<Tile> takeTilesOfColor(const string &color) {
+  pair<vector<Tile>, vector<Tile>> takeTilesOfColor(const string &color) {
     vector<Tile> takenTiles;
+    vector<Tile> discardedTiles;
 
     for (auto it = tiles.begin(); it != tiles.end();) {
       if (it->getColor() == color) {
         takenTiles.push_back(*it);
         it = tiles.erase(it);
       } else {
-        ++it;
+        discardedTiles.push_back(*it);
+        it = tiles.erase(it);
       }
     }
 
-    return takenTiles;
+    return make_pair(takenTiles, discardedTiles);
   }
 
   bool isEmpty() const { return tiles.empty(); }
+  map<string, int> getContents() const { return getTileCounts(tiles); }
+  void printContents() const {
+    if (tiles.empty()) {
+      cout << "Factory Display " << to_string(display_id) << " is empty"
+           << endl;
+      return;
+    }
+    printTileCounts(tiles, "Factory Display " + to_string(display_id));
+  }
 
-  void printContents() const { printTileCounts(tiles, "Factory Display"); }
+  vector<Tile> tiles;
 
 private:
-  vector<Tile> tiles;
+  int display_id;
 };
 
 // Factory class
@@ -149,7 +175,7 @@ public:
   Factory(int numFactoryDisplays) : centralMarket() {
     tileBag = make_shared<TileBag>();
     for (int i = 0; i < numFactoryDisplays; ++i) {
-      factoryDisplays.push_back(make_shared<FactoryDisplay>(*tileBag));
+      factoryDisplays.push_back(make_shared<FactoryDisplay>(*tileBag, i));
     }
   }
 
@@ -161,11 +187,32 @@ public:
     }
   }
 
-  void transferTilesToCentralMarket() {
-    for (const auto &display : factoryDisplays) {
-      for (const Tile &tile : display->takeTilesOfColor("")) {
+  vector<Tile> takeDisplayTiles(int displayId, const string &color) {
+    shared_ptr<FactoryDisplay> display = factoryDisplays[displayId];
+
+    if (!any_of(
+            display->tiles.begin(), display->tiles.end(),
+            [&color](const Tile &tile) { return tile.getColor() == color; })) {
+      return vector<Tile>();
+    } else {
+      auto [takenTiles, discardedTiles] = display->takeTilesOfColor(color);
+      for (const Tile &tile : discardedTiles) {
         centralMarket.addTile(tile);
       }
+      return takenTiles;
+    }
+  }
+
+  vector<Tile> takeCenterTiles(const string &color) {
+    vector<Tile> takenTiles = centralMarket.takeTilesOfColor(color);
+    return takenTiles;
+  }
+
+  auto getContents(int displayId = -1) const {
+    if (displayId == -1) {
+      return centralMarket.getContents();
+    } else {
+      return factoryDisplays[displayId]->getContents();
     }
   }
 
@@ -178,16 +225,15 @@ public:
   }
 
   // Add other methods as needed to interact with FactoryDisplay and
-  // CentralMarket
+  vector<shared_ptr<FactoryDisplay>> factoryDisplays;
+  CentralMarket centralMarket;
 
 private:
   shared_ptr<TileBag> tileBag;
-  vector<shared_ptr<FactoryDisplay>> factoryDisplays;
-  CentralMarket centralMarket;
 };
 
 int main() {
-  int numFactoryDisplays = 3;
+  int numFactoryDisplays = 5;
   Factory factory(numFactoryDisplays);
 
   // Refill factory displays
@@ -195,6 +241,16 @@ int main() {
 
   // Print contents of factory
   factory.printContents();
+
+  auto content = factory.getContents(-1);
+  // print colors
+
+  cout << content["Black"] << content["Red"] << content["Blue"]
+       << content["Yellow"] << content["Green"] << endl;
+
+  auto content2 = factory.getContents(0);
+  cout << content2["Black"] << content2["Red"] << content2["Blue"]
+       << content2["Yellow"] << content2["Green"] << endl;
 
   // Perform other game logic, such as taking tiles from displays or central
   // market
