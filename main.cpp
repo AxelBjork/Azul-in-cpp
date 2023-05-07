@@ -3,38 +3,45 @@
 #include <ctime>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <random>
 #include <vector>
+
+using namespace std;
 
 // Tile class
 class Tile {
 public:
-  Tile(const std::string &color) : color(color) {}
+  Tile(const string &color) : color(color) {}
 
-  std::string getColor() const { return color; }
+  string getColor() const { return color; }
 
 private:
-  std::string color;
+  string color;
 };
 
-std::map<std::string, int> printTileCounts(const std::vector<Tile> &tiles,
-                                           const std::string &containerName) {
-  std::map<std::string, int> colorCounts;
-  const std::vector<std::string> colors = {"Black", "Red", "Blue", "White",
-                                           "Green"};
+map<string, int> getTileCounts(const vector<Tile> &tiles) {
+  map<string, int> colorCounts;
+  const vector<string> colors = {"Black", "Red", "Blue", "Yellow", "Green"};
 
-  for (const std::string &color : colors) {
+  for (const string &color : colors) {
     colorCounts[color] = 0;
   }
 
   for (const Tile &tile : tiles) {
     colorCounts[tile.getColor()]++;
   }
-  std::cout << containerName << " contents:" << std::endl;
-  for (const auto &colorCount : colorCounts) {
-    std::cout << colorCount.first << ": " << colorCount.second << std::endl;
-  }
+
   return colorCounts;
+}
+
+void printTileCounts(const vector<Tile> &tiles, const string &containerName) {
+  map<string, int> colorCounts = getTileCounts(tiles);
+
+  cout << containerName << " contents:" << endl;
+  for (const auto &colorCount : colorCounts) {
+    cout << colorCount.first << ": " << colorCount.second << endl;
+  }
 }
 
 // TileBag class
@@ -42,15 +49,15 @@ class TileBag {
 public:
   TileBag() {
     initTiles();
-    std::srand(std::time(0));
+    srand(time(0));
   }
 
   Tile drawRandomTile() {
     if (tiles.empty()) {
-      throw std::runtime_error("No tiles left in the bag");
+      throw runtime_error("No tiles left in the bag");
     }
 
-    int randomIndex = std::rand() % tiles.size();
+    int randomIndex = rand() % tiles.size();
     Tile randomTile = tiles[randomIndex];
     tiles.erase(tiles.begin() + randomIndex);
     return randomTile;
@@ -59,19 +66,18 @@ public:
   void printContents() const { printTileCounts(tiles, "Tile Bag"); }
 
 private:
-  std::vector<Tile> tiles;
+  vector<Tile> tiles;
 
   void initTiles() {
-    const std::vector<std::string> colors = {"Black", "Red", "Blue", "White",
-                                             "Green"};
+    const vector<string> colors = {"Black", "Red", "Blue", "Yellow", "Green"};
     int tilesPerColor = 20;
 
-    for (const std::string &color : colors) {
+    for (const string &color : colors) {
       for (int i = 0; i < tilesPerColor; ++i) {
         tiles.emplace_back(color);
       }
     }
-  };
+  }
 };
 
 // CentralMarket class
@@ -79,8 +85,8 @@ class CentralMarket {
 public:
   void addTile(const Tile &tile) { tiles.push_back(tile); }
 
-  std::vector<Tile> takeTilesOfColor(const std::string &color) {
-    std::vector<Tile> takenTiles;
+  vector<Tile> takeTilesOfColor(const string &color) {
+    vector<Tile> takenTiles;
 
     for (auto it = tiles.begin(); it != tiles.end();) {
       if (it->getColor() == color) {
@@ -99,7 +105,7 @@ public:
   void printContents() const { printTileCounts(tiles, "Central Market"); }
 
 private:
-  std::vector<Tile> tiles;
+  vector<Tile> tiles;
 };
 
 // FactoryDisplay class
@@ -114,8 +120,8 @@ public:
     }
   }
 
-  std::vector<Tile> takeTilesOfColor(const std::string &color) {
-    std::vector<Tile> takenTiles;
+  vector<Tile> takeTilesOfColor(const string &color) {
+    vector<Tile> takenTiles;
 
     for (auto it = tiles.begin(); it != tiles.end();) {
       if (it->getColor() == color) {
@@ -134,33 +140,64 @@ public:
   void printContents() const { printTileCounts(tiles, "Factory Display"); }
 
 private:
-  std::vector<Tile> tiles;
+  vector<Tile> tiles;
+};
+
+// Factory class
+class Factory {
+public:
+  Factory(int numFactoryDisplays) : centralMarket() {
+    tileBag = make_shared<TileBag>();
+    for (int i = 0; i < numFactoryDisplays; ++i) {
+      factoryDisplays.push_back(make_shared<FactoryDisplay>(*tileBag));
+    }
+  }
+
+  void refillDisplays() {
+    for (const auto &display : factoryDisplays) {
+      if (display->isEmpty()) {
+        display->refill(*tileBag);
+      }
+    }
+  }
+
+  void transferTilesToCentralMarket() {
+    for (const auto &display : factoryDisplays) {
+      for (const Tile &tile : display->takeTilesOfColor("")) {
+        centralMarket.addTile(tile);
+      }
+    }
+  }
+
+  void printContents() const {
+    tileBag->printContents();
+    centralMarket.printContents();
+    for (const auto &display : factoryDisplays) {
+      display->printContents();
+    }
+  }
+
+  // Add other methods as needed to interact with FactoryDisplay and
+  // CentralMarket
+
+private:
+  shared_ptr<TileBag> tileBag;
+  vector<shared_ptr<FactoryDisplay>> factoryDisplays;
+  CentralMarket centralMarket;
 };
 
 int main() {
-  TileBag tileBag;
-  FactoryDisplay factoryDisplay(tileBag);
-  CentralMarket centralMarket;
+  int numFactoryDisplays = 3;
+  Factory factory(numFactoryDisplays);
 
-  // Refill the factory display
-  factoryDisplay.refill(tileBag);
+  // Refill factory displays
+  factory.refillDisplays();
 
-  // Take all Red tiles from the factory display
-  std::vector<Tile> takenTiles = factoryDisplay.takeTilesOfColor("Red");
+  // Print contents of factory
+  factory.printContents();
 
-  // Add the remaining tiles to the central market
-  for (const Tile &tile : factoryDisplay.takeTilesOfColor("")) {
-    centralMarket.addTile(tile);
-  }
-
-  // Take all Black tiles from the central market
-  std::vector<Tile> takenTilesFromMarket =
-      centralMarket.takeTilesOfColor("Black");
-
-  // Print the contents of TileBag, FactoryDisplay, and CentralMarket
-  tileBag.printContents();
-  factoryDisplay.printContents();
-  centralMarket.printContents();
+  // Perform other game logic, such as taking tiles from displays or central
+  // market
 
   return 0;
 }
