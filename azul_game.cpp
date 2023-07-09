@@ -83,7 +83,7 @@ vector<Tile> CentralMarket::takeTilesOfColor(const string &color) {
     }
   }
   if (center_taken == false) {
-    Tile penalty_tile = tiles[5];
+    Tile penalty_tile = tiles[5]; // todo fix this is not a new tile
     center_taken = true;
     takenTiles.push_back(penalty_tile);
   }

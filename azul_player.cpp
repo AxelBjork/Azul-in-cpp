@@ -4,8 +4,11 @@
 // PlayerBoard class
 PlayerBoard::PlayerBoard() {
   // Initialize pattern lines
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < numPatternLines; ++i) {
     patternLines.emplace_back(vector<Tile>(i + 1));
+  }
+  for (int i = 0; i < numPatternLines; ++i) {
+    wall.emplace_back(vector<Tile>(numPatternLines));
   }
 }
 
@@ -47,8 +50,8 @@ void PlayerBoard::endOfRound(ScoringSystem &scoringSystem) {
   // Move completed pattern lines to the wall
   for (int i = 0; i < 5; ++i) {
     if (isPatternLineFull(i)) {
-      Tile tile = patternLines[i][0];
-      wall[i].push_back(tile);
+      Tile score_tile = patternLines[i][0];
+      wall[i].push_back(score_tile);
       scoringSystem.scorePlacedTile(i, wall[i].size() - 1, wall);
       patternLines[i] = vector<Tile>(i + 1);
     }
@@ -57,6 +60,16 @@ void PlayerBoard::endOfRound(ScoringSystem &scoringSystem) {
   // Clear the floor line and score negative points
   scoringSystem.scoreFloorLine(floorLine);
   floorLine.clear();
+}
+
+void PlayerBoard::printContents() const {
+  for (int row = 0; row < numPatternLines; ++row) {
+    if (patternLines[row].empty()) {
+      cout << "Board Row " << to_string(row) << " is empty" << endl;
+      return;
+    }
+    printTileCounts(patternLines[row], "Board Row " + to_string(row));
+  }
 }
 
 bool PlayerBoard::isPatternLineFull(int row) const {

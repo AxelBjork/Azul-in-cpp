@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-
 using std::string;
 using std::vector;
 
@@ -17,9 +16,11 @@ public:
   bool addTilesToPatternLine(int row, const vector<Tile> &tiles);
   void addTilesToFloorLine(const vector<Tile> &tiles);
   void endOfRound(class ScoringSystem &scoringSystem);
+  void printContents() const;
 
 private:
   bool isPatternLineFull(int row) const;
+  int numPatternLines = 5;
 
   vector<vector<Tile>> patternLines;
   vector<Tile> floorLine;
